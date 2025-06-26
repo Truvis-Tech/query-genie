@@ -224,7 +224,7 @@ archive_data_files() {
 
 # Function to check if virtual environment exists
 check_venv_exists() {
-    if [ -d "$VENV_PATH" ] && [ -f "$VENV_PATH/Scripts/activate" ]; then
+    if [ -d "$VENV_PATH" ] && [ -f "$VENV_PATH/bin/activate" ]; then
         log_debug "Virtual environment exists at: $VENV_PATH"
         return 0
     else
@@ -238,13 +238,13 @@ create_venv() {
     log_info "Creating virtual environment at: $VENV_PATH"
 
     # Check if python is available
-    if ! command -v python &> /dev/null; then
-        log_error "python command not found. Please install Python 3."
+    if ! command -v python3 &> /dev/null; then
+        log_error "python3 command not found. Please install Python 3."
         return 1
     fi
 
     # Create virtual environment
-    execute_command "python -m venv $VENV_PATH" "Creating virtual environment"
+    execute_command "python3 -m venv $VENV_PATH" "Creating virtual environment"
     if [ $? -ne 0 ]; then
         log_error "Failed to create virtual environment"
         return 1
@@ -258,7 +258,7 @@ create_venv() {
 activate_venv() {
     log_info "Activating virtual environment: $VENV_PATH"
 
-    if [ ! -f "$VENV_PATH/Scripts/activate" ]; then
+    if [ ! -f "$VENV_PATH/bin/activate" ]; then
         log_error "Virtual environment activation script not found"
         return 1
     fi
@@ -266,12 +266,12 @@ activate_venv() {
     # Source the activation script
     # Note: We can't directly source in a subshell, so we'll set the PATH and VIRTUAL_ENV variables
     export VIRTUAL_ENV="$VENV_PATH"
-    export PATH="$VENV_PATH/Scripts:$PATH"
+    export PATH="$VENV_PATH/bin:$PATH"
 
     # Verify activation
-    if [[ "$PATH" == *"$VENV_PATH/Scripts"* ]]; then
+    if [[ "$PATH" == *"$VENV_PATH/bin"* ]]; then
         log_info "Virtual environment activated successfully"
-        log_debug "Using Python: $(which python)"
+        log_debug "Using Python: $(which python3)"
         return 0
     else
         log_error "Failed to activate virtual environment"
@@ -426,8 +426,8 @@ execute_data_extractor() {
     archive_data_files "data_output"
     
     # Execute the command
-    execute_command "python -m extraction_utility.info_schema" "extraction_utility/info_schema.py execution"
-    execute_command "python -m extraction_utility.logs" "extraction_utility/logs.py execution"
+    execute_command "python3 -m extraction_utility.info_schema" "extraction_utility/info_schema.py execution"
+    execute_command "python3 -m extraction_utility.logs" "extraction_utility/logs.py execution"
     local status=$?
 
     # Calculate and store execution time
@@ -477,7 +477,7 @@ execute_dataload_from_parquet() {
     # fi
 
     # Execute the command
-    execute_command "python -m postgres_utility.loadDataToPostgres" "postgres_utility/loadDataToPostgres.py execution"
+    execute_command "python3 -m postgres_utility.loadDataToPostgres" "postgres_utility/loadDataToPostgres.py execution"
     local status=$?
 
     # Calculate and store execution time
@@ -505,7 +505,7 @@ execute_sql_scripts() {
     # fi
 
     # Execute the command
-    execute_command "python -m postgres_utility.run_sql_scripts $mode" "postgres_utility/run_sql_scripts.py $mode mode execution"
+    execute_command "python3 -m postgres_utility.run_sql_scripts $mode" "postgres_utility/run_sql_scripts.py $mode mode execution"
     local status=$?
 
     # Calculate and store execution time
@@ -604,19 +604,19 @@ print_summary() {
         log_info "Step 5: $mins minutes and $secs seconds"
     fi
 
-    # # Step 6 time
-    # if [ -n "${STEP_TIMES[5]}" ]; then
-    #     local mins=$(( ${STEP_TIMES[5]} / 60 ))
-    #     local secs=$(( ${STEP_TIMES[5]} % 60 ))
-    #     log_info "Step 6: $mins minutes and $secs seconds"
-    # fi
+    # Step 6 time
+    if [ -n "${STEP_TIMES[5]}" ]; then
+        local mins=$(( ${STEP_TIMES[5]} / 60 ))
+        local secs=$(( ${STEP_TIMES[5]} % 60 ))
+        log_info "Step 6: $mins minutes and $secs seconds"
+    fi
 
-    # # Step 7 time
-    # if [ -n "${STEP_TIMES[6]}" ]; then
-    #     local mins=$(( ${STEP_TIMES[6]} / 60 ))
-    #     local secs=$(( ${STEP_TIMES[6]} % 60 ))
-    #     log_info "Step 7: $mins minutes and $secs seconds"
-    # fi
+    # Step 7 time
+    if [ -n "${STEP_TIMES[6]}" ]; then
+        local mins=$(( ${STEP_TIMES[6]} / 60 ))
+        local secs=$(( ${STEP_TIMES[6]} % 60 ))
+        log_info "Step 7: $mins minutes and $secs seconds"
+    fi
 
     log_info ""
     log_info "Log file: $LOG_FILE"
