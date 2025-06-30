@@ -90,3 +90,13 @@ days = <days>
 logs_output_directory = <logs_dir>
 log_type = <log_type>
 
+
+------------------------------
+
+How to run trulens
+
+chmod +x run.sh
+
+./run.sh
+
+
