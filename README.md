@@ -64,3 +64,29 @@ SELECT
 FROM pg_stat_activity
 WHERE (now() - pg_stat_activity.query_start) > interval '1 minutes'
 AND state <> 'idle';
+
+
+
+
+----------------------
+[postgres_db]
+project_id = t-innovation
+region = us-central1
+instance_name = query-genie
+database = postgres
+iam_user = query-genie-sa@t-innovation.iam.gserviceaccount.com
+schema = public
+
+[extraction_utility]
+project_id = t-innovation
+dataset_id = query-genie
+service_account_file = C:\Users\Lenovo\Downloads\t-innovation-cbc1c5417bd7.json
+region = us-central1
+data_output_directory = <data_output_directory>
+bq_location = us-central1
+
+[extraction_utility_logs]
+days = <days>
+logs_output_directory = <logs_dir>
+log_type = <log_type>
+
