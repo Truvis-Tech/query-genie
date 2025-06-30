@@ -51,9 +51,17 @@ log_type = <log_type>                     # Type of logs
 
 **Note:** Replace all values in angle brackets (`<...>`) with your actual configuration values.
 
+# Run the application with:
+# java -Dspring.config.location=file:/path/to/config/application.yml \
+#      -DINSTANCE_CONNECTION_NAME=your-project:region:instance-name \
+#      -DDB_NAME=recommendations \
+#      -DDB_USER=your-service-account@project.iam.gserviceaccount.com \
+#      -DGOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json \
+#      -jar query-genie-1.0.0.jar
 ---
 
 For further details, refer to the comments in each configuration file.
+
 
 
 SELECT 
