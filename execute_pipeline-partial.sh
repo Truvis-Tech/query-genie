@@ -41,6 +41,11 @@ if [ ! -d "logs" ]; then
     echo "Created logs directory"
 fi
 
+# DINSTANCE_CONNECTION_NAME=your-project:region:instance-name \
+# #      -DDB_NAME=databaseName \
+# #      -DDB_USER=your-service-account@project.iam.gserviceaccount.com \
+# #      -DGOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json \
+# #      -jar query-genie-1.0.0.jar
 JAR_PARAMS="-Dspring.config.location=file:config/application.yml"  # JAR parameters
 JAR_MEMORY="-Xmx2g -Xms1g"  # Memory allocation for JAR
 VERBOSE=false

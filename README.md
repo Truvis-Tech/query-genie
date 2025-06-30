@@ -54,3 +54,13 @@ log_type = <log_type>                     # Type of logs
 ---
 
 For further details, refer to the comments in each configuration file.
+
+
+SELECT 
+    pid,
+    now() - pg_stat_activity.query_start AS duration,
+    query,
+    state
+FROM pg_stat_activity
+WHERE (now() - pg_stat_activity.query_start) > interval '1 minutes'
+AND state <> 'idle';
