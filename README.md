@@ -90,3 +90,25 @@ days = <days>
 logs_output_directory = <logs_dir>
 log_type = <log_type>
 
+
+------------------------------
+
+How to run trulens
+
+chmod +x run.sh
+
+./run.sh
+
+
+
+curl -X 'GET' \
+'http://127.0.0.1:8000/health' \
+-H 'accept: application/json'
+
+curl -X 'POST' \
+'http://127.0.0.1:8000/get-recommendations' \
+-H 'accept: application/json' \
+-H 'Content-Type: application/json' \
+-d '{
+"market": "US"
+}'
