@@ -33,7 +33,9 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="logs/pipeline_execution_${TIMESTAMP}.log"
 JAR_FILE="query-genie-1.0.0.jar"  # JAR filename
 DATA_TRANSFORMER_WHL_FILE="trulens_data_transformer-1.0.1-py3-none-any.whl"
+DATA_TRANSFORMATION_CONFIG_PATH="./data_transformation/config/config.ini" 
 DATA_EXTRACTOR_WHL_FILE="trulens_extraction_utility-1.0.1-py3-none-any.whl"
+DATA_EXTRACTOR_CONFIG_PATH="./extraction_utility/config/config.ini"
 
 # Create logs directory if it doesn't exist
 if [ ! -d "logs" ]; then
@@ -41,11 +43,6 @@ if [ ! -d "logs" ]; then
     echo "Created logs directory"
 fi
 
-# DINSTANCE_CONNECTION_NAME=your-project:region:instance-name \
-# #      -DDB_NAME=databaseName \
-# #      -DDB_USER=your-service-account@project.iam.gserviceaccount.com \
-# #      -DGOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json \
-# #      -jar query-genie-1.0.0.jar
 JAR_PARAMS="-Dspring.config.location=file:config/application.yml"  # JAR parameters
 JAR_MEMORY="-Xmx2g -Xms1g"  # Memory allocation for JAR
 VERBOSE=false
@@ -482,7 +479,7 @@ execute_dataload_from_parquet() {
     # fi
 
     # Execute the command
-    execute_command "python3 -m postgres_utility.loadDataToPostgres" "postgres_utility/loadDataToPostgres.py execution"
+    execute_command "python3 -m postgres_utility.loadDataToPostgres --config-path \"$DATA_EXTRACTOR_CONFIG_PATH\"" "postgres_utility/loadDataToPostgres.py execution"
     local status=$?
 
     # Calculate and store execution time
@@ -510,7 +507,7 @@ execute_sql_scripts() {
     # fi
 
     # Execute the command
-    execute_command "python3 -m postgres_utility.run_sql_scripts $mode" "postgres_utility/run_sql_scripts.py $mode mode execution"
+    execute_command "python3 -m postgres_utility.run_sql_scripts $mode --config-path \"$DATA_TRANSFORMATION_CONFIG_PATH\"" "postgres_utility/run_sql_scripts.py $mode mode execution"
     local status=$?
 
     # Calculate and store execution time
@@ -699,25 +696,25 @@ main() {
     local current_step=1
     local exit_status=0
 
-    # # # Step 1: Install Extractor WHL package
-    # install_extractor_whl_package $current_step
-    # exit_status=$?
-    # if [ $exit_status -ne 0 ]; then
-    #     log_error "Step $current_step failed with exit code $exit_status"
-    #     print_summary 1 $current_step
-    #     exit 1
-    # fi
-    # current_step=$((current_step + 1))
+    # # Step 1: Install Extractor WHL package
+    install_extractor_whl_package $current_step
+    exit_status=$?
+    if [ $exit_status -ne 0 ]; then
+        log_error "Step $current_step failed with exit code $exit_status"
+        print_summary 1 $current_step
+        exit 1
+    fi
+    current_step=$((current_step + 1))
 
-    # # Step 2: Execute extraction_utility.info_schema.py and extraction_utility.logs.py
-    # execute_data_extractor $current_step
-    # exit_status=$?
-    # if [ $exit_status -ne 0 ]; then
-    #     log_error "Step $current_step failed with exit code $exit_status"
-    #     print_summary 1 $current_step
-    #     exit 1
-    # fi
-    # current_step=$((current_step + 1))
+    # Step 2: Execute extraction_utility.info_schema.py and extraction_utility.logs.py
+    execute_data_extractor $current_step
+    exit_status=$?
+    if [ $exit_status -ne 0 ]; then
+        log_error "Step $current_step failed with exit code $exit_status"
+        print_summary 1 $current_step
+        exit 1
+    fi
+    current_step=$((current_step + 1))
 
     # Step 3: Install Transformer WHL package
     install_transformer_whl_package $current_step
