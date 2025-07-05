@@ -125,6 +125,10 @@ Output only the raw SQL query — no quotes, no code syntax, no explanations.
 Do not wrap the query in ', ", or backticks.
 Just return plain SQL.
 
+# Remove surrounding single or double quotes if present
+    if response.startswith(('"')) and response.endswith(('"')):
+        return response[1:-1].strip()
+
 
 JOIN AMH_FZ_FDR_DEV_SIT.event_store es
   ON z.identifier = es.lifecycle_id
