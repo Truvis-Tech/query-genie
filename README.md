@@ -116,6 +116,10 @@ curl -X 'POST' \
 SELECT COUNT(DISTINCT a.userId) AS user_count
 FROM AMH_FZ_FDR_DEV_SIT.cm_event_assignee_update a,
      UNNEST(a.ids) AS z
+
+Generate only the SQL query without wrapping it in quotes or any programming language syntax.
+Return the query as plain SQL, not as a string.
+Do not add any quotes (' or ") around the query.
 JOIN AMH_FZ_FDR_DEV_SIT.event_store es
   ON z.identifier = es.lifecycle_id
 WHERE PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%z', 
