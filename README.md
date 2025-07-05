@@ -112,3 +112,26 @@ curl -X 'POST' \
 -d '{
 "market": "US"
 }'
+
+SELECT COUNT(DISTINCT a.userId) AS user_count
+FROM AMH_FZ_FDR_DEV_SIT.cm_event_assignee_update a,
+     UNNEST(a.ids) AS z
+
+Generate only the SQL query without wrapping it in quotes or any programming language syntax.
+Return the query as plain SQL, not as a string.
+Do not add any quotes (' or ") around the query.
+
+Output only the raw SQL query — no quotes, no code syntax, no explanations.
+Do not wrap the query in ', ", or backticks.
+Just return plain SQL.
+
+# Remove surrounding single or double quotes if present
+    if response.startswith(('"')) and response.endswith(('"')):
+        return response[1:-1].strip()
+
+
+JOIN AMH_FZ_FDR_DEV_SIT.event_store es
+  ON z.identifier = es.lifecycle_id
+WHERE PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%z', 
+         REPLACE(es.sender_email_chg_date, ' +00:00', '+0000')
+      ) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY);
