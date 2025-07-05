@@ -112,3 +112,12 @@ curl -X 'POST' \
 -d '{
 "market": "US"
 }'
+
+SELECT COUNT(DISTINCT a.userId) AS user_count
+FROM AMH_FZ_FDR_DEV_SIT.cm_event_assignee_update a,
+     UNNEST(a.ids) AS z
+JOIN AMH_FZ_FDR_DEV_SIT.event_store es
+  ON z.identifier = es.lifecycle_id
+WHERE PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%z', 
+         REPLACE(es.sender_email_chg_date, ' +00:00', '+0000')
+      ) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY);
