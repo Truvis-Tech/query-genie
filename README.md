@@ -135,5 +135,3 @@ JOIN AMH_FZ_FDR_DEV_SIT.event_store es
 WHERE PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%z', 
          REPLACE(es.sender_email_chg_date, ' +00:00', '+0000')
       ) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY);
-
-gcloud compute scp "C:\Users\45449840\Downloads\query-genie-main.zip" query-genie-reco-dev-99:~ --zone=asia-east2-a --internal-ip
