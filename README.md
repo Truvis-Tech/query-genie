@@ -138,6 +138,7 @@ WHERE PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%z',
 
 
 
+```
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
@@ -157,3 +158,4 @@ export default defineConfig({
     },
   }
 })
+```
