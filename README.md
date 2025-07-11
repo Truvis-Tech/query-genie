@@ -136,3 +136,26 @@ WHERE PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%z',
          REPLACE(es.sender_email_chg_date, ' +00:00', '+0000')
       ) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY);
 
+
+
+```
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 8443,
+    host: '0.0.0.0',
+    fs: {
+      strict: false
+    }
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  }
+})
+```
