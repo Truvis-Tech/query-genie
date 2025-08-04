@@ -696,43 +696,48 @@ call AMH_FZ_FDR_DEV_SIT.Payment_MI_Proc()
 -- Query 2
 call AMH_FZ_FDR_DEV_SIT.Analyst_Action_Report_Proc();
 
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'terraform-jenkins-usr${PROJECT_ID}.iam') THEN
-        CREATE USER "terraform-jenkins-usr${PROJECT_ID}.iam" CREATEDB CREATEROLE;
-    END IF;
-END
-$$;
+source /opt/app/envvars.cfg
 
--- Grant permissions (these are idempotent)
-GRANT ALL ON ALL TABLES IN SCHEMA public TO "terraform-jenkins-usr${PROJECT_ID}.iam";
-ALTER USER "terraform-jenkins-usr${PROJECT_ID}.iam" CREATEDB CREATEROLE;
 
--- Check if user exists before creating
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'query-genie${PROJECT_ID}.iam') THEN
-        CREATE USER "query-genie${PROJECT_ID}.iam" CREATEDB CREATEROLE;
-    END IF;
-END
-$$;
+declare -a USERS=(
+    "terraform-jenkins-usr@${PROJECT_ID}.iam"
+    "query-genie@${PROJECT_ID}.iam"
+    "gcp.${PROJECT_ID}.devops-team@hsbc.com"
+)
+declare -a GRANTS=(
+    "ALL"
+    "ALL"
+    "SELECT"
+)
+declare -a ATTRIBUTES=(
+    "CREATEDB CREATEROLE"
+    "CREATEDB CREATEROLE"
+    ""
+)
 
--- Grant permissions (these are idempotent)
-GRANT ALL ON ALL TABLES IN SCHEMA public TO "query-genie${PROJECT_ID}.iam";
-ALTER USER "query-genie${PROJECT_ID}.iam" CREATEDB CREATEROLE;
 
--- Check if user exists before creating
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'gcp.${PROJECT_ID}.devops-team@hsbc.com') THEN
-        CREATE USER "gcp.${PROJECT_ID}.devops-team@hsbc.com";
-    END IF;
-END
-$$;
+PSQL_CMD="PGPASSWORD='Temp@1234' psql -h 127.0.0.1 -p 5432 -d recommendations -U postgres"
 
--- Grant permissions (these are idempotent)
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO "gcp.${PROJECT_ID}.devops-team@hsbc.com";
 
--- Extensions (these are idempotent)
-CREATE EXTENSION IF NOT EXISTS pgaudit;
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+for i in "${!USERS[@]}"; do
+    user="${USERS[$i]}"
+    grant="${GRANTS[$i]}"
+    attr="${ATTRIBUTES[$i]}"
+
+    echo "Configuring user: ${user}"
+
+    $PSQL_CMD -c "CREATE ROLE IF NOT EXISTS \"${user}\" WITH LOGIN;"
+
+    $PSQL_CMD -c "ALTER GROUP postgres ADD USER \"${user}\";" || true
+
+    $PSQL_CMD -c "GRANT ${grant} ON ALL TABLES IN SCHEMA public TO \"${user}\";"
+
+    if [[ -n "$attr" ]]; then
+        $PSQL_CMD -c "ALTER ROLE \"${user}\" ${attr};"
+    fi
+done
+
+
+$PSQL_CMD -c "CREATE EXTENSION IF NOT EXISTS pgaudit; CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+
+echo "PostgreSQL setup complete."
