@@ -159,3 +159,63 @@ export default defineConfig({
   }
 })
 ```
+execute_sql() {
+    echo "Connecting to Cloud SQL instance: $CLOUDSQL_INSTANCE"
+    echo "Project ID: $PROJECT_ID"
+    
+    # Method 1: Using gcloud sql connect (recommended for Cloud SQL)
+    if command -v gcloud &> /dev/null; then
+        echo "Using gcloud sql connect..."
+        echo "$SQL_QUERY" | gcloud sql connect "$CLOUDSQL_INSTANCE" \
+            --project="$PROJECT_ID" \
+            --user=postgres \
+            --database=postgres
+    
+    # Method 2: Using psql with connection string (if available)
+    elif [ -n "$CLOUDSQL_CONNECTION_STRING" ] && command -v psql &> /dev/null; then
+        echo "Using psql with connection string..."
+        echo "$SQL_QUERY" | psql "$CLOUDSQL_CONNECTION_STRING"
+    
+    # Method 3: Using psql with individual connection parameters
+    elif [ -n "$CLOUDSQL_PRIVATE_IP" ] && command -v psql &> /dev/null; then
+        echo "Using psql with private IP..."
+        echo "$SQL_QUERY" | psql -h "$CLOUDSQL_PRIVATE_IP" \
+            -U postgres \
+            -d postgres \
+            -p 5432
+    
+    else
+        echo "Error: No suitable connection method found."
+        echo "Please ensure either:"
+        echo "1. gcloud CLI is installed and authenticated"
+        echo "2. psql is installed and CLOUDSQL_CONNECTION_STRING is set"
+        echo "3. psql is installed and CLOUDSQL_PRIVATE_IP is set"
+        exit 1
+    fi
+}
+
+# Error handling
+set -e
+trap 'echo "Script failed at line $LINENO"' ERR
+
+# Validate required variables
+if [ -z "$PROJECT_ID" ]; then
+    echo "Error: PROJECT_ID is not set"
+    exit 1
+fi
+
+if [ -z "$CLOUDSQL_INSTANCE" ]; then
+    echo "Error: CLOUDSQL_INSTANCE is not set"
+    exit 1
+fi
+
+# Execute the SQL
+echo "Starting SQL execution..."
+execute_sql
+
+if [ $? -eq 0 ]; then
+    echo "SQL queries executed successfully!"
+else
+    echo "Error executing SQL queries"
+    exit 1
+fi
