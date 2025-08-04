@@ -159,37 +159,93 @@ export default defineConfig({
   }
 })
 ```
+#!/bin/bash
+
+# Source environment variables
+source /opt/app/envvars.cfg
+
+# Set variables from environment
+PROJECT_ID=${project}
+CLOUDSQL_INSTANCE=${CLOUDSQL_INSTANCE}
+CLOUDSQL_CONNECTION_STRING=${CLOUDSQL_CONNECTION_STRING}
+CLOUDSQL_PRIVATE_IP=${CLOUDSQL_PRIVATE_IP}
+
+# SQL queries to execute
+SQL_QUERY="alter group postgres add user \"sql-reco-engine@${PROJECT_ID}.iam\";
+grant all on all tables in schema public to \"sql-reco-engine@${PROJECT_ID}.iam\";
+alter user \"sql-reco-engine@${PROJECT_ID}.iam\" CREATEDB CREATEROLE ;
+
+alter group postgres add user \"query-genie@${PROJECT_ID}.iam\";
+grant all on all tables in schema public to \"query-genie@${PROJECT_ID}.iam\";
+alter user \"query-genie@${PROJECT_ID}.iam\" CREATEDB CREATEROLE ;
+
+CREATE EXTENSION IF NOT EXISTS pgaudit;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+
+# Function to get IAM access token for Cloud SQL
+get_access_token() {
+    if command -v gcloud &> /dev/null; then
+        gcloud auth print-access-token
+    else
+        echo "Error: gcloud CLI is required for IAM authentication"
+        exit 1
+    fi
+}
+
+# Function to execute SQL with IAM authentication
 execute_sql() {
     echo "Connecting to Cloud SQL instance: $CLOUDSQL_INSTANCE"
     echo "Project ID: $PROJECT_ID"
+    echo "Using IAM authentication..."
     
-    # Method 1: Using gcloud sql connect (recommended for Cloud SQL)
+    # Get current IAM user
+    IAM_USER=$(gcloud auth list --filter=status:ACTIVE --format="value(account)" | head -n1)
+    echo "Current IAM user: $IAM_USER"
+    
+    # Method 1: Using gcloud sql connect with IAM (recommended)
     if command -v gcloud &> /dev/null; then
-        echo "Using gcloud sql connect..."
-        echo "$SQL_QUERY" | gcloud sql connect "$CLOUDSQL_INSTANCE" \
+        echo "Using gcloud sql connect with IAM authentication..."
+        
+        # First, get an access token and use it as password
+        ACCESS_TOKEN=$(get_access_token)
+        
+        # Connect using the IAM user
+        PGPASSWORD="$ACCESS_TOKEN" echo "$SQL_QUERY" | gcloud sql connect "$CLOUDSQL_INSTANCE" \
             --project="$PROJECT_ID" \
-            --user=postgres \
+            --user="$IAM_USER" \
             --database=postgres
     
-    # Method 2: Using psql with connection string (if available)
-    elif [ -n "$CLOUDSQL_CONNECTION_STRING" ] && command -v psql &> /dev/null; then
-        echo "Using psql with connection string..."
-        echo "$SQL_QUERY" | psql "$CLOUDSQL_CONNECTION_STRING"
-    
-    # Method 3: Using psql with individual connection parameters
+    # Method 2: Using psql with Cloud SQL Proxy and IAM
     elif [ -n "$CLOUDSQL_PRIVATE_IP" ] && command -v psql &> /dev/null; then
-        echo "Using psql with private IP..."
-        echo "$SQL_QUERY" | psql -h "$CLOUDSQL_PRIVATE_IP" \
-            -U postgres \
+        echo "Using psql with IAM authentication..."
+        
+        ACCESS_TOKEN=$(get_access_token)
+        
+        # Use the access token as password for IAM authentication
+        PGPASSWORD="$ACCESS_TOKEN" echo "$SQL_QUERY" | psql \
+            -h "$CLOUDSQL_PRIVATE_IP" \
+            -U "$IAM_USER" \
             -d postgres \
             -p 5432
     
+    # Method 3: Using connection string with IAM
+    elif [ -n "$CLOUDSQL_CONNECTION_STRING" ] && command -v psql &> /dev/null; then
+        echo "Using connection string with IAM authentication..."
+        
+        ACCESS_TOKEN=$(get_access_token)
+        
+        # Modify connection string to include IAM user and token
+        MODIFIED_CONNECTION_STRING=$(echo "$CLOUDSQL_CONNECTION_STRING" | sed "s/user=[^[:space:]]*/user=$IAM_USER/")
+        
+        PGPASSWORD="$ACCESS_TOKEN" echo "$SQL_QUERY" | psql "$MODIFIED_CONNECTION_STRING"
+    
     else
-        echo "Error: No suitable connection method found."
-        echo "Please ensure either:"
+        echo "Error: No suitable connection method found for IAM authentication."
+        echo "Please ensure:"
         echo "1. gcloud CLI is installed and authenticated"
-        echo "2. psql is installed and CLOUDSQL_CONNECTION_STRING is set"
-        echo "3. psql is installed and CLOUDSQL_PRIVATE_IP is set"
+        echo "2. Your IAM account has Cloud SQL Client role"
+        echo "3. IAM database authentication is enabled on your Cloud SQL instance"
+        echo "4. Your IAM user exists as a database user in the Cloud SQL instance"
         exit 1
     fi
 }
@@ -198,7 +254,7 @@ execute_sql() {
 set -e
 trap 'echo "Script failed at line $LINENO"' ERR
 
-# Validate required variables
+# Validate required variables and IAM setup
 if [ -z "$PROJECT_ID" ]; then
     echo "Error: PROJECT_ID is not set"
     exit 1
@@ -208,6 +264,18 @@ if [ -z "$CLOUDSQL_INSTANCE" ]; then
     echo "Error: CLOUDSQL_INSTANCE is not set"
     exit 1
 fi
+
+# Check if gcloud is authenticated
+if ! gcloud auth list --filter=status:ACTIVE --format="value(account)" | head -n1 > /dev/null; then
+    echo "Error: No active gcloud authentication found"
+    echo "Please run: gcloud auth login"
+    exit 1
+fi
+
+# Verify IAM permissions
+echo "Checking IAM permissions..."
+IAM_USER=$(gcloud auth list --filter=status:ACTIVE --format="value(account)" | head -n1)
+echo "Will connect as IAM user: $IAM_USER"
 
 # Execute the SQL
 echo "Starting SQL execution..."
