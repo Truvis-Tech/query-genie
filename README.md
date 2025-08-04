@@ -697,8 +697,7 @@ call AMH_FZ_FDR_DEV_SIT.Payment_MI_Proc()
 call AMH_FZ_FDR_DEV_SIT.Analyst_Action_Report_Proc();
 
 source /opt/app/envvars.cfg
-
-
+PROJECT_ID=${project}
 declare -a USERS=(
     "terraform-jenkins-usr@${PROJECT_ID}.iam"
     "query-genie@${PROJECT_ID}.iam"
@@ -714,11 +713,7 @@ declare -a ATTRIBUTES=(
     "CREATEDB CREATEROLE"
     ""
 )
-
-
 PSQL_CMD="PGPASSWORD='Temp@1234' psql -h 127.0.0.1 -p 5432 -d recommendations -U postgres"
-
-
 for i in "${!USERS[@]}"; do
     user="${USERS[$i]}"
     grant="${GRANTS[$i]}"
@@ -736,8 +731,5 @@ for i in "${!USERS[@]}"; do
         $PSQL_CMD -c "ALTER ROLE \"${user}\" ${attr};"
     fi
 done
-
-
 $PSQL_CMD -c "CREATE EXTENSION IF NOT EXISTS pgaudit; CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
-
 echo "PostgreSQL setup complete."
