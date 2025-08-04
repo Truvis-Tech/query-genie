@@ -696,4 +696,43 @@ call AMH_FZ_FDR_DEV_SIT.Payment_MI_Proc()
 -- Query 2
 call AMH_FZ_FDR_DEV_SIT.Analyst_Action_Report_Proc();
 
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'terraform-jenkins-usr${PROJECT_ID}.iam') THEN
+        CREATE USER "terraform-jenkins-usr${PROJECT_ID}.iam" CREATEDB CREATEROLE;
+    END IF;
+END
+$$;
 
+-- Grant permissions (these are idempotent)
+GRANT ALL ON ALL TABLES IN SCHEMA public TO "terraform-jenkins-usr${PROJECT_ID}.iam";
+ALTER USER "terraform-jenkins-usr${PROJECT_ID}.iam" CREATEDB CREATEROLE;
+
+-- Check if user exists before creating
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'query-genie${PROJECT_ID}.iam') THEN
+        CREATE USER "query-genie${PROJECT_ID}.iam" CREATEDB CREATEROLE;
+    END IF;
+END
+$$;
+
+-- Grant permissions (these are idempotent)
+GRANT ALL ON ALL TABLES IN SCHEMA public TO "query-genie${PROJECT_ID}.iam";
+ALTER USER "query-genie${PROJECT_ID}.iam" CREATEDB CREATEROLE;
+
+-- Check if user exists before creating
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'gcp.${PROJECT_ID}.devops-team@hsbc.com') THEN
+        CREATE USER "gcp.${PROJECT_ID}.devops-team@hsbc.com";
+    END IF;
+END
+$$;
+
+-- Grant permissions (these are idempotent)
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO "gcp.${PROJECT_ID}.devops-team@hsbc.com";
+
+-- Extensions (these are idempotent)
+CREATE EXTENSION IF NOT EXISTS pgaudit;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
